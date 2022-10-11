@@ -224,11 +224,11 @@ func (h *Handler) Process(ctx context.Context, network net.Network, connection i
 	if err := connection.SetReadDeadline(time.Now().Add(sessionPolicy.Timeouts.Handshake)); err != nil {
 		return newError("unable to set read deadline").Base(err).AtWarning()
 	}
-
 	reader := &buf.BufferedReader{Reader: buf.NewReader(connection)}
 	svrSession := encoding.NewServerSession(h.clients, h.sessionHistory)
 	svrSession.SetAEADForced(aeadForced)
 	request, err := svrSession.DecodeRequestHeader(reader)
+
 	if err != nil {
 		if errors.Cause(err) != io.EOF {
 			log.Record(&log.AccessMessage{
@@ -241,7 +241,6 @@ func (h *Handler) Process(ctx context.Context, network net.Network, connection i
 		}
 		return err
 	}
-
 	if h.secure && isInsecureEncryption(request.Security) {
 		log.Record(&log.AccessMessage{
 			From:   connection.RemoteAddr(),
@@ -288,11 +287,19 @@ func (h *Handler) Process(ctx context.Context, network net.Network, connection i
 
 	requestDone := func() error {
 		defer timer.SetTimeout(sessionPolicy.Timeouts.DownlinkOnly)
-
 		bodyReader := svrSession.DecodeRequestBody(request, reader)
-		if err := buf.Copy(bodyReader, link.Writer, buf.UpdateActivity(timer)); err != nil {
-			return newError("failed to transfer request").Base(err)
+
+		options := []buf.CopyOption{buf.UpdateActivity(timer)}
+		if request.Port == 1935 {
+			if err := buf.CopyRtmp(bodyReader, link.Writer, options...); err != nil {
+				return newError("failed to transfer request").Base(err)
+			}
+		} else {
+			if err := buf.Copy(bodyReader, link.Writer, options...); err != nil {
+				return newError("failed to transfer request").Base(err)
+			}
 		}
+
 		return nil
 	}
 

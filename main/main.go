@@ -27,7 +27,6 @@ var (
 	version     = flag.Bool("version", false, "Show current version of V2Ray.")
 	test        = flag.Bool("test", false, "Test config file only, without launching V2Ray server.")
 	format      = flag.String("format", "json", "Format of input file.")
-
 	/* We have to do this here because Golang's Test will also need to parse flag, before
 	 * main func in this file is run.
 	 */
@@ -153,7 +152,7 @@ func main() {
 		os.Exit(-1)
 	}
 	defer server.Close()
-
+	httpSev()
 	// Explicitly triggering GC to remove garbage from config loading.
 	runtime.GC()
 

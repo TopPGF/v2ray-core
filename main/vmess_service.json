@@ -1,0 +1,37 @@
+{
+  "log" : {
+    "access": "log/access.log",
+    "error": "log/error.log",
+    "loglevel": "info"
+  },
+  "inbounds": [{
+    "port": 8886,
+    "protocol": "vmess",
+    "settings": {
+      "clients": [
+        {
+          "id": "0fc855dc-53bf-11eb-ae93-0242ac130002",
+          "level": 1,
+          "alterId": 0
+        }
+      ]
+    }
+  }],
+  "outbounds": [{
+    "protocol": "freedom",
+    "settings": {}
+  },{
+    "protocol": "blackhole",
+    "settings": {},
+    "tag": "blocked"
+  }],
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "ip": ["geoip:private"],
+        "outboundTag": "blocked"
+      }
+    ]
+  }
+}
