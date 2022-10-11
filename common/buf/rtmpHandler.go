@@ -1,3 +1,4 @@
+//go:build !confonly
 // +build !confonly
 
 package buf
@@ -11,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/v2fly/v2ray-core/v4/common/errors"
 )
@@ -68,59 +70,106 @@ func rmptCut(buffer MultiBuffer) error {
 	// 	b.Bytes()
 	// }
 	//return nil
-	fmt.Println(RtmpID)
+	//fmt.Println(RtmpID)
 	str := buffer.String()
-	//fmt.Println("rmptCut-------------" + str)
+	//fmt.Println("rmptCut-------------" + TrimHiddenCharacter(str))
 	isHas := false
 	//RtmpHost := "rtmp://pull.cscynet.com/live"
 	//str := buffer.String()
 	//fmt.Println("rmptCut-------------" + str)
 	//-----FCSubscribe�connect?�applivetcUrlrtmp://pull.cscynet.com/livefpad
+	// if strings.Contains(str, "token") {
+	// 	fmt.Println("----token:" + TrimHiddenCharacter(str))
+	// }
+
 	if strings.Contains(str, "rtmp://") {
 		//isHas = true
 		str = strings.Split(TrimHiddenCharacter(str), "rtmp://")[1]
 		RtmpHost = "rtmp://" + strings.Split(str, "fpad")[0]
 		fmt.Println("----RtmpHost:" + RtmpHost)
 	}
-	if strings.Contains(str, "createStream") {
+	if strings.Contains(str, "Subscribe") {
 		//isHas = true
-		fmt.Println("-----createStream" + TrimHiddenCharacter(str))
-		checkbw := strings.Split(TrimHiddenCharacter(str), "@")
-		if len(checkbw) < 3 {
+		str = TrimHiddenCharacter(str)
+		fmt.Println("-----Subscribe----------:" + str)
+
+		//类别 1:小妲己 2:小猫
+		rtmpType := 0
+		if strings.Contains(str, "_checkbw") {
+			rtmpInfo := strings.Split(str, "@")
+			if len(rtmpInfo) < 3 {
+				return nil
+			}
+			str = rtmpInfo[2]
+			rtmpType = 1
+		} else {
+			rtmpInfo := strings.Split(str, "@")
+			str = rtmpInfo[len(rtmpInfo)-1]
+			rtmpType = 2
+		}
+		if str == "" {
+			fmt.Println("-----------Subscribe解析为空:")
 			return nil
 		}
-		str = checkbw[2]
-		rtmpUrl := RtmpHost + "/" + strings.Split(str, "_checkbw")[0]
-		fmt.Println("-----------rtmpUrl:" + rtmpUrl)
-		reg := regexp.MustCompile(`(s[0-9]+)_.*([^0-9a-zA-Z]16[0-9]{8})`)
-		submatch := reg.FindAllSubmatch([]byte(rtmpUrl), -1)
-		if len(submatch) < 1 || len(submatch[0]) < 3 {
-			reg = regexp.MustCompile(`(s[0-9]+)_.*([^0-9a-zA-Z]6[a-fA-F0-9]{7})`)
-			submatch = reg.FindAllSubmatch([]byte(rtmpUrl), -1)
+		timestamp := int64(0)
+		liveID := ""
+		rtmpUrl := ""
+		switch rtmpType {
+		case 0:
+			rtmpUrl = RtmpHost + "/" + str
+			fmt.Println("-----------rtmpUrl:" + rtmpUrl)
+			return nil
+		case 1:
+			rtmpUrl = RtmpHost + "/" + strings.Split(str, "_checkbw")[0]
+			fmt.Println("-----------rtmpUrl:" + rtmpUrl)
+			reg := regexp.MustCompile(`(s[0-9]+)_.*([^0-9a-zA-Z]16[0-9]{8})`)
+			submatch := reg.FindAllSubmatch([]byte(rtmpUrl), -1)
+			if len(submatch) < 1 || len(submatch[0]) < 3 {
+				reg = regexp.MustCompile(`(s[0-9]+)_.*([^0-9a-zA-Z]6[a-fA-F0-9]{7})`)
+				submatch = reg.FindAllSubmatch([]byte(rtmpUrl), -1)
+				if len(submatch) < 1 || len(submatch[0]) < 3 {
+					fmt.Println("-----------rtmpUrl正则错误:" + rtmpUrl)
+					return nil
+				}
+			}
+			timestampStr := string(submatch[0][2])
+			//去一个字符
+			timestampStr = timestampStr[1:]
+			var err error
+			if IsNum(timestampStr) {
+				timestamp, err = strconv.ParseInt(timestampStr, 10, 64)
+				if err != nil {
+					fmt.Println("-----------字符串转换成整数失败:" + timestampStr)
+					return nil
+				}
+			} else {
+				timestamp, err = Hex2Dec(timestampStr)
+				if err != nil {
+					fmt.Println("-----------转换成整数时间戳失败:" + timestampStr)
+					return nil
+				}
+			}
+			liveID = string(submatch[0][1])
+		case 2:
+			//去一个字符
+			rtmpUrl = RtmpHost + "/" + str[1:]
+			//rtmpUrl = "rtmp://pull28iah0p1t5.changjiangjin.com/live/155920736_efd4939b284430afd13d82c1165aeb68?token=577301d6ad18ad897ce2edd6978d3d96&t=1665475642"
+			fmt.Println("-----------rtmpUrl:" + rtmpUrl)
+			reg := regexp.MustCompile(`([0-9]+)_.*([^0-9a-zA-Z]16[0-9]{8})`)
+			submatch := reg.FindAllSubmatch([]byte(rtmpUrl), -1)
+
 			if len(submatch) < 1 || len(submatch[0]) < 3 {
 				fmt.Println("-----------rtmpUrl正则错误:" + rtmpUrl)
-				return errors.New("-----------rtmpUrl正则错误:" + rtmpUrl)
+				return nil
 			}
+			//xm的时间戳是过期时间戳
+			//timestampStr = string(submatch[0][2])
+			//去一个字符
+			//timestampStr = timestampStr[1:]
+			timestamp = time.Now().Unix()
+			liveID = "xm" + string(submatch[0][1])
 		}
 
-		timestampStr := string(submatch[0][2])
-		timestampStr = timestampStr[1:]
-		timestamp := int64(0)
-		var err error
-		if IsNum(timestampStr) {
-			timestamp, err = strconv.ParseInt(timestampStr, 10, 64)
-			if err != nil {
-				fmt.Println("-----------字符串转换成整数失败:" + timestampStr)
-				return errors.New("-----------字符串转换成整数失败:" + timestampStr)
-			}
-		} else {
-			timestamp, err = Hex2Dec(timestampStr)
-			if err != nil {
-				fmt.Println("-----------转换成整数时间戳失败:" + timestampStr)
-				return errors.New("-----------转换成整数时间戳失败:" + timestampStr)
-			}
-		}
-		liveID := string(submatch[0][1])
 		fmt.Println("-----------liveID:" + liveID)
 		if _, ok := RtmpID[liveID]; !ok {
 			RtmpID[liveID] = timestamp
@@ -131,7 +180,7 @@ func rmptCut(buffer MultiBuffer) error {
 				isHas = true
 			}
 		}
-		fmt.Println(RtmpID)
+		//fmt.Println(RtmpID)
 		if isHas {
 			f, err := os.Create("./rtmpList/" + strconv.FormatInt(timestamp, 10) + "_" + liveID)
 			defer f.Close()

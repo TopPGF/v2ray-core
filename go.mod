@@ -8,7 +8,8 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/websocket v1.4.2
 	github.com/jhump/protoreflect v1.8.2
-	github.com/lucas-clemente/quic-go v0.21.1
+	github.com/lucas-clemente/quic-go v0.26.0
+	github.com/marten-seemann/qtls-go1-15 v0.1.4 // indirect
 	github.com/miekg/dns v1.1.43
 	github.com/pires/go-proxyproto v0.5.0
 	github.com/seiflotfy/cuckoofilter v0.0.0-20201222105146-bc6005554a0c
@@ -20,7 +21,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210611083646-a4fc73990273
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.27.1
 	h12.io/socks v1.0.2

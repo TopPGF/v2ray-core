@@ -17,6 +17,7 @@
 *.DS_Store
 .idea
 *.zip
+*.log
 *.tar.gz
 v2ray
 v2ctl
