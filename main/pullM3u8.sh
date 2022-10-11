@@ -6,6 +6,10 @@
 
 LIVE=$1
 echo "<div>Url:${LIVE}</div>"
-echo "<div>time:$2</div>"
+echo "<div>ID:$2</div>"
+echo "<div>time:$3</div>"
+echo "Url:${LIVE}" >> ./log/pull.log
+echo "ID:$2" >> ./log/pull.log
+echo "time:$3" >> ./log/pull.log
 cd /home/wwwroot/temp/share/xiaodaji/
-nohup ./cut.sh $1 $2 >> ./log/pull.log 2>./log/pull.error & echo $! >> ./log/pull.pid
+nohup ./cut.sh $1 $2 $3 >> ./log/pull.log 2>./log/pull.error & echo $! >> ./log/pull.pid
